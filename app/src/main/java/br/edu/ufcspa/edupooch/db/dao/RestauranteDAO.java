@@ -10,7 +10,7 @@ import br.edu.ufcspa.edupooch.db.R;
 import br.edu.ufcspa.edupooch.db.modelo.Restaurante;
 
 /**
- * Created by Particular on 10/07/2016.
+ * Classe que simula um banco de dados
  */
 public class RestauranteDAO {
 
