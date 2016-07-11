@@ -59,6 +59,7 @@ public class VotacaoActivity extends AppCompatActivity {
     }
 
     private void jaVotou() {
+
         findViewById(R.id.text_javotou).setVisibility(View.VISIBLE);
         btResultado = (Button) findViewById(R.id.bt_resultado);
         btResultado.setVisibility(View.VISIBLE);
@@ -66,7 +67,8 @@ public class VotacaoActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 // Ao clicar no botao é exibido o resultado (aleaotório)
-                Restaurante vencedor = restaurantes.get(new Random().nextInt(6));;
+                Restaurante vencedor = restaurantes.get(new Random().nextInt(6));
+
                 RestauranteDAO.restaurantesDaSemana[Calendar.getInstance().get(Calendar.DAY_OF_WEEK)] = vencedor;
 
                 findViewById(R.id.layoutVencedor).setVisibility(View.VISIBLE);
@@ -74,7 +76,7 @@ public class VotacaoActivity extends AppCompatActivity {
                 TextView txtNomeVencedor = (TextView) findViewById(R.id.textNomeRestauranteVencedor);
                 txtNomeVencedor.setText(vencedor.getNome());
 
-                ImageView imagemVencedor = (ImageView) findViewById( R.id.imagem_vencedor);
+                ImageView imagemVencedor = (ImageView) findViewById(R.id.imagem_vencedor);
                 imagemVencedor.setImageResource(vencedor.getFoto());
 
                 btResultado.setVisibility(View.GONE);
@@ -86,49 +88,74 @@ public class VotacaoActivity extends AppCompatActivity {
     }
 
     /**
-     * Método para carregar a lista de restaurantes.
+     * Método para carregar a lista de restaurantes, carregamento assíncrono
+     * com uma thread, para melhorar o desempenho
      */
     private void carregaLista() {
-        final ListView listaRestaurantes = (ListView) findViewById(R.id.lista_restaurantes);
-        listaRestaurantes.setVisibility(View.VISIBLE);
-        findViewById(R.id.text_instrucoes).setVisibility(View.VISIBLE);
-
-        RestaurantesAdapter adapter = new RestaurantesAdapter(this, restaurantes);
-        listaRestaurantes.setAdapter(adapter);
-
-        listaRestaurantes.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+        new Thread(new Runnable() {
             @Override
-            public void onItemClick(final AdapterView<?> lista, View item, int position, long id) {
-                final Restaurante restaurante = (Restaurante) listaRestaurantes.getItemAtPosition(position);
+            public void run() {
+                final ListView listaRestaurantes = (ListView) findViewById(R.id.lista_restaurantes);
+                RestaurantesAdapter adapter = new RestaurantesAdapter(VotacaoActivity.this, restaurantes);
+                listaRestaurantes.setAdapter(adapter);
 
-                AlertDialog.Builder builder = new AlertDialog.Builder(VotacaoActivity.this);
-                builder.setCancelable(false);
-                builder.setTitle(restaurante.getNome());
-                builder.setMessage(getString(R.string.dialog_votar) + " " + restaurante.getNome() + "?");
-                builder.setPositiveButton(getString(R.string.dialog_yes), new DialogInterface.OnClickListener() {
-
+                listaRestaurantes.setOnItemClickListener(new AdapterView.OnItemClickListener() {
                     @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        restaurante.incrementaVoto();
-                        user.setUltimoVoto(new Date());
-                        listaRestaurantes.setVisibility(View.GONE);
-                        findViewById(R.id.text_instrucoes).setVisibility(View.GONE);
-                        jaVotou();
+                    public void onItemClick(final AdapterView<?> lista, View item, int position, long id) {
+                        final Restaurante restaurante = (Restaurante) listaRestaurantes.getItemAtPosition(position);
+
+                        AlertDialog.Builder builder = new AlertDialog.Builder(VotacaoActivity.this);
+                        builder.setCancelable(false);
+                        builder.setTitle(restaurante.getNome());
+                        builder.setMessage(getString(R.string.dialog_votar) + " " + restaurante.getNome() + "?");
+                        builder.setPositiveButton(getString(R.string.dialog_yes), new DialogInterface.OnClickListener() {
+
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                restaurante.incrementaVoto();
+                                user.setUltimoVoto(new Date());
+
+                                runOnUiThread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        listaRestaurantes.setVisibility(View.GONE);
+                                        findViewById(R.id.text_instrucoes).setVisibility(View.GONE);
+                                        jaVotou();
+
+                                    }
+                                });
+
+                            }
+                        });
+
+                        builder.setNegativeButton(getString(R.string.dialog_no), new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                dialog.cancel();
+                            }
+                        });
+                        AlertDialog alert = builder.create();
+                        alert.show();
+
+
                     }
                 });
 
-                builder.setNegativeButton(getString(R.string.dialog_no), new DialogInterface.OnClickListener() {
+
+                runOnUiThread(new Runnable() {
                     @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        dialog.cancel();
+                    public void run() {
+                        listaRestaurantes.setVisibility(View.VISIBLE);
+                        findViewById(R.id.text_instrucoes).setVisibility(View.VISIBLE);
+
                     }
                 });
-                AlertDialog alert = builder.create();
-                alert.show();
 
 
             }
-        });
+        }).start();
+
+
     }
 
 }
